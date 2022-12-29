@@ -1,5 +1,4 @@
 #include <iostream>
-#include <stack>
 using namespace std;
 class range{
 public:
@@ -9,10 +8,10 @@ public:
 
 class Node{
 public:
-    int Max , low , high;
-
+    int Max;
+    range *ptr;
     Node *lchild,*rchild;
-    Node(): Max{0},low{0} , high{0},lchild{nullptr}, rchild{nullptr}{
+    Node(): Max{0},lchild{nullptr}, rchild{nullptr},ptr{nullptr}{
     }
 };
 
@@ -20,20 +19,20 @@ class IntervalTree{
 private:
     Node *root;
 public:
-    IntervalTree(): root{nullptr}{}
+    IntervalTree(): root{nullptr}{
+    }
     Node* Rinsert(Node *p , int low, int high)
     {
         Node *t;
-        if(p == NULL)
+        if(p == nullptr)
         {
             t = new Node();
-            t->low = low;
-            t->high = high;
-            t->Max = high;
+            t->ptr = new range(high,low);
+            t->Max = t->ptr->high;
             return t;
         }
 
-        if(low < p->low) p->lchild =Rinsert(p->lchild , low , high);
+        if(low < p->ptr->low) p->lchild =Rinsert(p->lchild , low , high);
         else p->rchild =Rinsert(p->rchild , low , high);
 
         if(p->lchild && p->rchild){
@@ -46,19 +45,37 @@ public:
             if(p->Max<p->rchild->Max) p->Max = p->rchild->Max;
         }
 
-        //if(p->Max < high) root->Max = high;
 
         return p;
 
     }
-
-    Node* RecursiveSearch(Node* t, int key)
+    bool check_overlap(range current_range, range target)
     {
-        if(t == nullptr)return NULL;
-        if(t->Max == key) return t;
-        else if(key<t->Max) return RecursiveSearch(t->lchild , key);
-        else return RecursiveSearch(t->rchild,key);
+        if ((current_range.low <= target.high && target.low <= current_range.high)
+            || (target.low < current_range.low && target.high>current_range.low)
+            || (target.low > current_range.low && target.low< current_range.high ))
+            return true;
+        return false;
     }
+    range* iterative_search(Node* p, range i){
+        while( (p!= nullptr) && (i.low > p->ptr->high || p->ptr
+        ->low> i.high)){
+            if(i.low > p->lchild->Max) p = p->rchild;
+            else p = p->lchild;
+        }
+        return p->ptr;
+    }
+    range* interval_search(Node* p, range i){
+        if (p == nullptr) return nullptr;
+        if (check_overlap(*(p->ptr), i))
+            return p->ptr;
+
+        if (p->lchild != nullptr && p->lchild->Max >= i.low)
+            return interval_search(p->lchild, i);
+
+        return interval_search(p->rchild, i);
+    }
+
     int height(Node *p)
     {
         int x = 0 , y = 0;
@@ -79,70 +96,15 @@ public:
             p = p->lchild;
         return p;
     }
-    Node* Delete(Node* p , int low , int high)
-    {
-        Node *q;
-        if( p == nullptr)return nullptr;
-        if(p->lchild == NULL && p->rchild == NULL)
-        {
-            if( p == root) root = NULL;
-            p->Max=0;
-            p->low=0;
-            p->high=0;
-            delete p;
-            return NULL;
-        }
-        if(low < p->low && high < p->low) p->lchild = Delete(p->lchild , low,high);
-        else if(low > p->high) p->rchild = Delete(p->rchild , low,high);
-        else{
-            if(height(p->lchild) > height(p->rchild))
-            {
-                q = inpre(p->lchild);
-                //p->Max = q->Max;
-                if(p->lchild && p->rchild){
-                    p->Max = p->lchild->Max > p->rchild->Max? p->lchild->Max : p->rchild->Max;
-                }
-                else if(p->lchild){
-                    p->Max = p->lchild->Max;
-                }
-                else if(p->rchild){
-                    p->Max = p->rchild->Max;
-                }
-                //p->Max = p->lchild->Max > p->rchild->Max? p->lchild->Max : p->rchild->Max;
-                p->low = q->low;
-                p->high = q->high;
-                p->lchild = Delete(p->lchild , q->low,q->high);
-                if( (low < p->low && high > p->low) || (low > p->low && high > p->high))Delete(p,p->low,p->high);
-            }
-            else
-            {
-                q = insucc(p->rchild);
-                //p->Max = q->Max;
-                if(p->lchild && p->rchild){
-                    p->Max = p->lchild->Max > p->rchild->Max? p->lchild->Max : p->rchild->Max;
-                }
-                else if(p->lchild){
-                    p->Max = p->lchild->Max;
-                }
-                else if(p->rchild){
-                    p->Max = p->rchild->Max;
-                }
-                p->low = q->low;
-                p->high = q->high;
-                p->rchild = Delete(p->rchild ,  q->low,q->high);
-                if( (low < p->low && high > p->low) || (low > p->low && high > p->high) ||(low > p->low && high < p->high) ||(low == p->low && high == p->high))Delete(p,p->low,p->high);
-            }
 
-        }
-        return p;
-    }
+
 
 
     void Inorder(Node *p)
     {
-        if(p != NULL){
+        if(p != nullptr){
             Inorder(p->lchild);
-            cout <<" "<<'['<<p->low<<','<<p->high<<']'<<"max = "<<p->Max;
+            cout <<" "<<'['<<p->ptr->low<<','<<p->ptr->high<<']'<<"max = "<<p->Max;
             Inorder(p->rchild);
         }
     }
@@ -151,16 +113,20 @@ public:
 };
 int main() {
     IntervalTree t;
-    t.SetRoot(t.Rinsert(t.GetRoot(), 17, 19));
-    t.Rinsert(t.GetRoot() , 5,11);
-    t.Rinsert(t.GetRoot() , 22,23);
-    t.Rinsert(t.GetRoot() , 4,8);
-    t.Rinsert(t.GetRoot() , 15,18);
+    t.SetRoot(t.Rinsert(t.GetRoot(), 15, 18));
+    t.Rinsert(t.GetRoot() , 1,5);
+    t.Rinsert(t.GetRoot() , 50,60);
+    t.Rinsert(t.GetRoot() , 70,80);
+    t.Rinsert(t.GetRoot() , 20,30);
     t.Rinsert(t.GetRoot() , 7,10);
-    t.Inorder(t.GetRoot());
-    t.Delete(t.GetRoot() , 16,18);
     cout<<endl;
     t.Inorder(t.GetRoot());
     cout<<endl;
+    range target = {12 ,8};
+    //range *answer = t.iterative_search(t.GetRoot() ,target);
+    range *answer = t.interval_search(t.GetRoot() ,target);
+    if(answer == nullptr)cout<<"no overlapping occur\n";
+    else cout<<"overlaping occur with ["<<answer->low<<" , "<<answer->high<<"]\n";
+
     return 0;
 }

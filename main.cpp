@@ -107,12 +107,15 @@ public:
         if (check_overlap(*(p->ranges), i))
         {
             arr[cur_pos++] = *p->ranges;
-            Delete(this->GetRoot(), p->ranges->low,p->ranges->high);
+
+            p = del(this->GetRoot(), p->ranges->low,p->ranges->high);
+            this->SetRoot(p);
+            return interval_search(p , i);
         }
         if (p->lchild && p->lchild->Max >= i.low)
             return interval_search(p->lchild, i);
         else
-           return interval_search(p->rchild, i);
+            return interval_search(p->rchild, i);
     }
 
     // get the curr. height of the tree
@@ -148,73 +151,7 @@ public:
      * the decision is made by the higher.
      *
      * */
-    Node* Delete(Node* p , int target_low , int target_high)
-    {
-        Node* q = nullptr;
-        // base case
-        if( p == nullptr) return nullptr;
-        // deleting the root after deleting all the nodes
-        if( p ->rchild == nullptr && p->lchild == nullptr)
-        {
-            if( p == root) root = nullptr;
-            delete p;
-            return nullptr;
-        }
 
-        if(target_low < p->ranges->low)
-             p->lchild = Delete(p->lchild , target_low,target_high);
-        else if(target_low > p->ranges->low)
-             p->rchild = Delete(p->rchild,target_low,target_high);
-        else{
-
-            if(height(p->lchild) > height(p->rchild))
-            {
-                q = inpre(p->lchild);
-                if(p->lchild && p->rchild)
-                {
-                    if(p->Max <p->lchild->Max ||p->Max < p->rchild->Max)
-                        p->Max = p->lchild->Max > p->rchild->Max? p->lchild->Max : p->rchild->Max;
-                }
-                else if(p->lchild)
-                {
-                    if(p->Max<p->lchild->Max)
-                        p->Max = p->lchild->Max;
-                }
-                else if(p->rchild)
-                {
-                    if(p->Max<p->rchild->Max)
-                        p->Max = p->rchild->Max;
-                }
-
-                p->ranges = q->ranges;
-                p->lchild = Delete(p->lchild , q->ranges->low,q->ranges->high);
-            }
-            else
-            {
-                q = insucc(p->rchild);
-                if(p->lchild && p->rchild)
-                {
-                    if(p->Max <p->lchild->Max ||p->Max < p->rchild->Max)
-                        p->Max = p->lchild->Max > p->rchild->Max? p->lchild->Max : p->rchild->Max;
-                }
-                else if(p->lchild)
-                {
-                    if(p->Max<p->lchild->Max)
-                        p->Max = p->lchild->Max;
-                }
-                else if(p->rchild)
-                {
-                    if(p->Max<p->rchild->Max)
-                        p->Max = p->rchild->Max;
-                }
-                p->ranges= q->ranges;
-                p->rchild = Delete(p->rchild , q->ranges->low,q->ranges->high);
-            }
-        }
-
-        return p;
-
-    }
     Node* del(Node *r, int l, int h) {
         if (!r) {
             return nullptr;
@@ -243,6 +180,7 @@ public:
                 r->rchild = del( r->rchild, r->ranges->low, r->ranges->high);
             }
         }
+
         return r;
     }
     // traverse on the tree
@@ -278,33 +216,17 @@ public:
  * */
 void searchLogic(IntervalTree t , range target)
 {
-    int n = t.getNumberOfNodes();
-    int curr = 0;
-    range *deleted_nodes = t.getDeletedNodes();
-
-    while(n--)
-    {
-        t.interval_search(t.GetRoot() , target);
-       /*
-        for(int i = curr ; i < t.GetCurrentPosition(); i++) {
-            cout << deleted_nodes[i].low << ' ' <<  deleted_nodes[i].high << endl;
-            t.Delete(t.GetRoot(), deleted_nodes[i].low, deleted_nodes[i].high);
-        }
-        curr += t.GetCurrentPosition();
-
-        if(t.getNumberOfNodes() == 0) break;
-*/
-    }
-
-    cout<<"tree inorder after deleting the overlapped intervals: " <<endl;
+    t.interval_search(t.GetRoot(),target);
+    cout<<"tree after searching:\n";
     t.Inorder(t.GetRoot());
+    range* delted_nodes = t.getDeletedNodes();
     cout<<endl;
-    for(int i = 0 ; i < t.GetCurrentPosition() ; i++) t.Rinsert(t.GetRoot(),deleted_nodes[i].low,deleted_nodes[i].high);
-
-    cout<<"Tree inorder after inserting  the deleted intervals: " <<endl;
-    t.Inorder(t.GetRoot());
-
-    cout << endl;
+    for(int i = 0 ; i < t.GetCurrentPosition() ; i++){
+        //cout<<delted_nodes[i].low<<" "<<delted_nodes[i].high<<endl;
+        t.Rinsert(t.GetRoot(),delted_nodes[i].low , delted_nodes[i].high);
+    }
+    cout<<"tree after intering delted nodes:\n";
+    cout<<endl;t.Inorder(t.GetRoot());
 }
 
 int main() {
@@ -320,8 +242,9 @@ int main() {
     t.Inorder(t.GetRoot());
     cout<<endl;
 
-    range target = {25 ,16};
+    range target = {30 ,22};
 
+    //searchLogic(t,target);
     searchLogic(t,target);
 
     return 0;

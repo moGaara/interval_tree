@@ -20,9 +20,11 @@ private:
     Node *root;
     range arr[100];
     int cur_pos;
+    int nodeNum;
 public:
     IntervalTree(): root{nullptr}{
         cur_pos = 0;
+        nodeNum = 1;
     }
     Node* Rinsert(Node *p , int low, int high)
     {
@@ -32,6 +34,7 @@ public:
             t = new Node();
             t->ranges = new range(high, low);
             t->Max = t->ranges->high;
+            nodeNum++;
             return t;
         }
 
@@ -56,6 +59,9 @@ public:
         return p;
 
     }
+    int getNumberOfNodes(){return nodeNum;}
+
+
     bool check_overlap(range current_range, range target)
     {
         if ((current_range.low <= target.high && target.low <= current_range.high)
@@ -65,10 +71,9 @@ public:
         return false;
     }
     range* iterative_search(Node* p, range i){
-        while( (p!= nullptr) && (i.low > p->ranges->high || p->ranges
-        ->low > i.high)){
-            if(i.low > p->lchild->Max) p = p->rchild;
-            else p = p->lchild;
+        while( p && (i.low > p->ranges->high || p->ranges->low > i.high)){
+            if(i.low <= p->lchild->Max && p->lchild) p = p->lchild;
+            else p = p->rchild;
         }
         return p->ranges;
     }
@@ -80,10 +85,10 @@ public:
         if (check_overlap(*(p->ranges), i))
             arr[cur_pos++] = *p->ranges;
 
-        if (p->lchild != nullptr && p->lchild->Max >= i.low)
+        if (p->lchild && p->lchild->Max >= i.low)
             return interval_search(p->lchild, i);
-
-        return interval_search(p->rchild, i);
+        else
+           return interval_search(p->rchild, i);
     }
 
 
@@ -209,7 +214,7 @@ void search_logic(IntervalTree t , range target){
         t.Inorder(t.GetRoot());cout<<endl;
         cout<<"interval ["<<target.low<<" , "<<target.high<<"]\n";
         cout<<"overlapped with intervals: ";
-        for(int i = 0 ; i < t.GetCurrentPosition() ; i++){
+        for(int i = 0 ; i < t.GetCurrentPosition(); i++){
             cout<<"["<<deleted_nodes[i].low<<" , "<<deleted_nodes[i].high<<"]\n";
             t.Delete(t.GetRoot() , deleted_nodes[i].low,deleted_nodes[i].high);
         }
@@ -221,11 +226,38 @@ void search_logic(IntervalTree t , range target){
     }
 }
 
+
+void searchLogic(IntervalTree t , range target){
+    int n = t.getNumberOfNodes();
+    int curr = 0;
+    range *deleted_nodes = t.getDeletedNodes();
+    while(n--){
+        t.interval_search(t.GetRoot() , target);
+        deleted_nodes = t.getDeletedNodes();
+        for(int i = curr ; i < t.GetCurrentPosition(); i++)
+        {
+            t.Delete(t.GetRoot() , deleted_nodes[i].low,deleted_nodes[i].high);
+        }
+        curr += t.GetCurrentPosition() - 1;
+
+        if(t.getNumberOfNodes() == 0) break;
+    }
+    cout<<"tree inorder after deleting the overlapped intervals: " <<endl;
+    t.Inorder(t.GetRoot());cout<<endl;
+    for(int i = 0 ; i < t.GetCurrentPosition() ; i++)
+    {
+        t.Rinsert(t.GetRoot(),deleted_nodes[i].low,deleted_nodes[i].high);
+    }
+    cout<<"Tree inorder after inserting  the deleted intervals: " <<endl;
+    t.Inorder(t.GetRoot());
+    cout << endl;
+}
+
 int main() {
     IntervalTree t;
     t.SetRoot(t.Rinsert(t.GetRoot(), 17, 19));
     t.Rinsert(t.GetRoot() , 5,11);
-    t.Rinsert(t.GetRoot() , 4,8);
+    t.Rinsert(t.GetRoot() , 30,22);
     t.Rinsert(t.GetRoot() , 15,18);
     t.Rinsert(t.GetRoot() , 7,10);
     t.Rinsert(t.GetRoot() , 22,29);
@@ -233,9 +265,9 @@ int main() {
     t.Inorder(t.GetRoot());
     cout<<endl;
 
-    range target = {16 ,14};
+    range target = {20 ,10};
 
-    search_logic(t,target);
+    searchLogic(t,target);
 
 
 

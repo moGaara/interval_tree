@@ -86,6 +86,7 @@ public:
         return interval_search(p->rchild, i);
     }
 
+
     int height(Node *p)
     {
         int x = 0 , y = 0;
@@ -107,6 +108,52 @@ public:
         return p;
     }
 
+    Node* Delete(Node* p , int target_low , int target_high){
+        Node* q = nullptr;
+        if( p == nullptr )return nullptr;
+        if( p ->rchild == nullptr && p->lchild == nullptr){
+            if( p == root) root = nullptr;
+            delete p;
+            return nullptr;
+        }
+        if(target_low < p->ranges->low) p->lchild = Delete(p->lchild , target_low,target_high);
+        else if(target_low > p->ranges->low)p->rchild = Delete(p->rchild,target_low,target_high);
+        else{
+            if(height(p->lchild) > height(p->rchild))
+            {
+                q = inpre(p->lchild);
+                if(p->lchild && p->rchild){
+                    if(p->Max <p->lchild->Max ||p->Max < p->rchild->Max  )p->Max = p->lchild->Max > p->rchild->Max? p->lchild->Max : p->rchild->Max;
+                }
+                else if(p->lchild){
+                    if(p->Max<p->lchild->Max) p->Max = p->lchild->Max;
+                }
+                else if(p->rchild){
+                    if(p->Max<p->rchild->Max) p->Max = p->rchild->Max;
+                }
+                p->ranges = q->ranges;
+                p->lchild = Delete(p->lchild , q->ranges->low,q->ranges->high);
+            }
+            else
+            {
+                q = insucc(p->rchild);
+                if(p->lchild && p->rchild){
+                    if(p->Max <p->lchild->Max ||p->Max < p->rchild->Max  )p->Max = p->lchild->Max > p->rchild->Max? p->lchild->Max : p->rchild->Max;
+                }
+                else if(p->lchild){
+                    if(p->Max<p->lchild->Max) p->Max = p->lchild->Max;
+                }
+                else if(p->rchild){
+                    if(p->Max<p->rchild->Max) p->Max = p->rchild->Max;
+                }
+                p->ranges= q->ranges;
+                p->rchild = Delete(p->rchild , q->ranges->low,q->ranges->high);
+            }
+        }
+
+        return p;
+
+    }
 
     Node* del(Node *r, int l, int h) {
         if (!r) {
@@ -147,33 +194,56 @@ public:
             Inorder(p->rchild);
         }
     }
+    int GetCurrentPosition() const{return cur_pos;}
     void SetRoot(Node *p){ root = p;}
     Node* GetRoot(){return root;}
 };
 
+void search_logic(IntervalTree t , range target){
 
+    t.interval_search(t.GetRoot() , target);
+    range *deleted_nodes = t.getDeletedNodes();
+    if( t.GetCurrentPosition() == 0)cout<<"No overlapping occured\n";
+    else{
+        cout<<" tree inorder before search: ";
+        t.Inorder(t.GetRoot());cout<<endl;
+        cout<<"interval ["<<target.low<<" , "<<target.high<<"]\n";
+        cout<<"overlapped with intervals: ";
+        for(int i = 0 ; i < t.GetCurrentPosition() ; i++){
+            cout<<"["<<deleted_nodes[i].low<<" , "<<deleted_nodes[i].high<<"]\n";
+            t.Delete(t.GetRoot() , deleted_nodes[i].low,deleted_nodes[i].high);
+        }
+        cout<<"tree inorder after deleting the overlapped intervals: ";
+        t.Inorder(t.GetRoot());cout<<endl;
+        for(int i = 0 ; i < t.GetCurrentPosition() ; i++){
+            t.Rinsert(t.GetRoot(),deleted_nodes[i].low,deleted_nodes[i].high);
+        }
+    }
+}
 
 int main() {
     IntervalTree t;
-    t.SetRoot(t.Rinsert(t.GetRoot(), 15, 18));
-    t.Rinsert(t.GetRoot() , 1,5);
-    t.Rinsert(t.GetRoot() , 50,60);
-    t.Rinsert(t.GetRoot() , 70,80);
-    t.Rinsert(t.GetRoot() , 7,11);
+    t.SetRoot(t.Rinsert(t.GetRoot(), 17, 19));
+    t.Rinsert(t.GetRoot() , 5,11);
+    t.Rinsert(t.GetRoot() , 4,8);
+    t.Rinsert(t.GetRoot() , 15,18);
     t.Rinsert(t.GetRoot() , 7,10);
-    cout<<endl;
-    t.Inorder(t.GetRoot());
-    cout<<endl;
-    t.del(t.GetRoot(),50,60);
+    t.Rinsert(t.GetRoot() , 22,29);
+
     t.Inorder(t.GetRoot());
     cout<<endl;
 
-    range target = {12 ,8};
-    //range *answer = t.iterative_search(t.GetRoot() ,target);
+    range target = {16 ,14};
+
+    search_logic(t,target);
+
+
+
+    /*range *answer = t.iterative_search(t.GetRoot() ,target);
     range *answer = t.interval_search(t.GetRoot() ,target);
     if(answer == nullptr)cout<<"no overlapping occur\n";
     else cout<<"overlaping occur with ["<<answer->low<<" , "<<answer->high<<"]\n";
-    range *ans = t.getDeletedNodes();
+    range *ans = t.getDeletedNodes();*/
 
     return 0;
 }
